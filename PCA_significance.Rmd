@@ -1,0 +1,402 @@
+---
+title: "PCA"
+output:
+  html_document:
+    toc: true
+    theme: united
+---
+
+
+```{r import_libraries}
+# import packages
+library(haven)
+library(here)
+library(readr)
+library(car)
+library(psych)
+library(ggpubr)
+library(ggplot2)
+library(FSA)
+library(lsr)
+library(rstatix)
+library(effectsize)
+library(effsize)
+library(rcompanion)
+library(esvis)
+library(FactoMineR)
+library(factoextra)
+```
+
+
+
+*******************************************************************************************************************************************************
+FEATURES ANALYSIS
+*******************************************************************************************************************************************************
+
+## Load data
+
+```{r load_data}
+# define the path to the data
+my_path <- here::here()
+PCA <- read_delim(paste(my_path, "PCA_all_flat.csv", sep="/"), ";", escape_double = FALSE, trim_ws = TRUE)
+#View(PCA)
+```
+
+
+
+## Descriptive stats
+
+```{r data_descriptive}
+describeBy(PCA, PCA$Annotation)
+```
+
+
+
+## Check assumptions
+
+```{r assumptions}
+
+RESULTS <- list()
+target <- c("CON", "HOM", "ANT")
+experimental_data <- PCA[which(PCA$Annotation %in% target),]
+feat_group <- list(experimental_data$rhythm_ALL, experimental_data$interval_ALL, experimental_data$note_ALL)
+feature_name <- c("Rhythm", "Interval", "Pitch")
+
+## KOLMOGOROV-SMIRNOV
+RESULTS <- c(RESULTS, "Normality (Kolmogorov-Smirnov)")
+index <- 0
+for (class in feat_group){
+  index=index+1
+  x <- as.numeric(class)
+  N <- length(x)
+  the_mean <- mean(x)
+  the_sd <- sd(x)
+  # compute the probability density for normal distribution 
+  Y <- rnorm(N, the_mean, the_sd)
+  # compute Kolmogorov-Smirnov
+  KSResult <- ks.test(x, Y)
+  RESULTS <- c(RESULTS, feature_name[index])
+  RESULTS <- c(RESULTS, KSResult$p.value)
+}
+
+## LEVENE
+RESULTS <- c(RESULTS, "Homogeneity (Levene)")
+index <- 0
+for (class in feat_group){
+  index=index+1
+  levResult <- leveneTest(class ~ as.factor(experimental_data$Annotation), data=experimental_data)
+  RESULTS <- c(RESULTS, feature_name[index])
+  RESULTS <- c(RESULTS, levResult$`Pr(>F)`[1:1])
+}
+
+for (elem in RESULTS){
+  print(elem)
+}
+```
+
+
+
+## Running Welch-ANOVA
+
+```{r Welch-ANOVA}
+target <- c("CON", "HOM", "ANT")
+experimental_data <- PCA[which(PCA$Annotation %in% target),]
+
+# select DV and IV
+#DV <- experimental_data$note_ALL
+#DV <- experimental_data$interval_ALL
+DV <- experimental_data$rhythm_ALL
+IV <- experimental_data$Annotation
+
+# Run ANOVA
+res.aov <- experimental_data %>% welch_anova_test(DV ~ IV)
+res.aov
+
+epsilonSquared(x=DV, g=IV)
+
+# Run multiple comparisons
+post.hoc <- experimental_data %>% games_howell_test(rhythm_ALL ~ Annotation, conf.level=0.95)
+post.hoc
+
+hedg_g(experimental_data, rhythm_ALL ~ Annotation)
+```
+
+
+
+
+
+*******************************************************************************************************************************************************
+TEXT ANALYSIS
+*******************************************************************************************************************************************************
+
+## Load data
+
+```{r text}
+functionals_Deltas_all <- read_delim("functionals_Deltas_all.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+View(functionals_Deltas_all)
+```
+
+
+## Stats text
+
+```{r stats_text}
+RESULTS <- list()
+target <- c("CON", "HOM", "ANT")
+#names(functionals_Deltas_all)
+experimental_data <- functionals_Deltas_all[which(functionals_Deltas_all$annotation %in% target),]
+experimental_data <- experimental_data[which(experimental_data$part_name == "Bass"),]
+feat_group <- list(experimental_data$syl_num, experimental_data$mel_num)
+feature_name <- c("syl", "mel")
+
+## KOLMOGOROV-SMIRNOV
+RESULTS <- c(RESULTS, "Normality (Kolmogorov-Smirnov)")
+index <- 0
+for (class in feat_group){
+  index=index+1
+  x <- as.numeric(class)
+  N <- length(x)
+  the_mean <- mean(x)
+  the_sd <- sd(x)
+  # compute the probability density for normal distribution 
+  Y <- rnorm(N, the_mean, the_sd)
+  # compute Kolmogorov-Smirnov
+  KSResult <- ks.test(x, Y)
+  RESULTS <- c(RESULTS, feature_name[index])
+  RESULTS <- c(RESULTS, KSResult$p.value)
+}
+
+## LEVENE
+RESULTS <- c(RESULTS, "Homogeneity (Levene)")
+index <- 0
+for (class in feat_group){
+  index=index+1
+  levResult <- leveneTest(class ~ as.factor(experimental_data$annotation), data=experimental_data)
+  RESULTS <- c(RESULTS, feature_name[index])
+  RESULTS <- c(RESULTS, levResult$`Pr(>F)`[1:1])
+}
+
+for (elem in RESULTS){
+  print(elem)
+}
+```
+
+
+
+## Kruskal for text
+
+```{r kruskal}
+target <- c("CON", "HOM", "ANT")
+experimental_data <- functionals_Deltas_all[which(functionals_Deltas_all$annotation %in% target),]
+
+#experimental_data <- experimental_data[which(experimental_data$part_name=="all_flat"),]
+#experimental_data <- experimental_data[which(experimental_data$part_name=="Canto"),]
+#experimental_data <- experimental_data[which(experimental_data$part_name=="Alto"),]
+#experimental_data <- experimental_data[which(experimental_data$part_name=="Quinto"),]
+#experimental_data <- experimental_data[which(experimental_data$part_name=="Tenor"),]
+experimental_data <- experimental_data[which(experimental_data$part_name=="Bass"),]
+
+# select DV and IV
+#DV <- experimental_data$syl_num
+#DV <- experimental_data$mel_num
+DV <- experimental_data$mel_ratio
+IV <- experimental_data$annotation
+
+# kruskal wallis
+kruskal_results <- kruskal.test(DV ~ IV, data = experimental_data)
+print(kruskal_results)
+dunn_result <- dunnTest(DV, IV, method="bh")
+print(dunn_result)
+kruskal_effsize(DV ~ IV, data=experimental_data)
+hedg_g(experimental_data, mel_ratio ~ annotation)
+```
+
+
+
+
+*******************************************************************************************************************************************************
+MODELS CONPARISON
+*******************************************************************************************************************************************************
+
+## Import MODELs output
+
+```{r get_models_results}
+# CNN
+CNN_3_11 <- read_delim("all_RESULTS_CNN_3_11/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+CNN_3_9 <- read_delim("all_RESULTS_CNN_3_9/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+CNN_2_11 <- read_delim("all_RESULTS_CNN_2_11/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+CNN_2_9 <- read_delim("all_RESULTS_CNN_2_9/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+
+# LSTM
+LSTM_3_11 <- read_delim("all_RESULTS_LSTM_3_11/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+LSTM_3_9 <- read_delim("all_RESULTS_LSTM_3_9/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+LSTM_2_11 <- read_delim("all_RESULTS_LSTM_2_11/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+LSTM_2_9 <- read_delim("all_RESULTS_LSTM_2_9/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+
+# SVM
+SVM_3_195 <- read_delim("all_RESULTS_SVM_3_195/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+SVM_3_163 <- read_delim("all_RESULTS_SVM_3_163/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+SVM_2_195 <- read_delim("all_RESULTS_SVM_2_195/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+SVM_2_163 <- read_delim("all_RESULTS_SVM_2_163/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+
+# MLP
+MLP_3_195 <- read_delim("all_RESULTS_MLP_3_195/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+MLP_3_163 <- read_delim("all_RESULTS_MLP_3_163/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+MLP_2_195 <- read_delim("all_RESULTS_MLP_2_195/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+MLP_2_163 <- read_delim("all_RESULTS_MLP_2_163/All_results.csv", 
+    "\t", escape_double = FALSE, trim_ws = TRUE)
+```
+
+
+## Preprocessing
+
+```{r pre-process_data}
+# rename cols
+colnames(CNN_3_11)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(CNN_2_11)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(CNN_3_9)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(CNN_2_9)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(LSTM_3_11)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(LSTM_2_11)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(LSTM_3_9)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(LSTM_2_9)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(SVM_3_195)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(SVM_2_195)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(SVM_3_163)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(SVM_2_163)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(MLP_3_195)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(MLP_2_195)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(MLP_3_163)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+colnames(MLP_2_163)<- c("x1", "UAR","rec_CON","pre_CON","rec_HOM","pre_HOM","rec_ANT","pre_ANT")
+
+# combine data
+all3 <- rbind(subset(CNN_3_11, select=-c(x1)), subset(LSTM_3_11, select=-c(x1)), subset(SVM_3_195, select=-c(x1)), subset(MLP_3_195, select=-c(x1)))
+all2 <- rbind(subset(CNN_2_11, select=-c(x1)), subset(LSTM_2_11, select=-c(x1)), subset(SVM_2_195, select=-c(x1)), subset(MLP_2_195, select=-c(x1)))
+sel3 <- rbind(subset(CNN_3_9, select=-c(x1)), subset(LSTM_3_9, select=-c(x1)), subset(SVM_3_163, select=-c(x1)), subset(MLP_3_163, select=-c(x1)))
+sel2 <- rbind(subset(CNN_2_9, select=-c(x1)), subset(LSTM_2_9, select=-c(x1)), subset(SVM_2_163, select=-c(x1)), subset(MLP_2_163, select=-c(x1)))
+
+# get labels
+model_label <- c(rep('CNN', 24), rep('LSTM', 24), rep('SVM', 24), rep('MLP', 24))
+
+# make dataframe
+res.all3 <- data.frame(model_label, all3)
+#View(res.all3)
+res.all2 <- data.frame(model_label, all2)
+#View(res.all2)
+res.sel3 <- data.frame(model_label, sel3)
+#View(res.sel3)
+res.sel2 <- data.frame(model_label, sel2)
+#View(res.sel2)
+```
+
+
+
+## Check Assumptions
+
+```{r assump_MODELS}
+RESULTS <- list()
+feat_group <- list(res.all3$UAR, res.all2$UAR, res.sel3$UAR, res.sel2$UAR)
+feature_name <- c("all3", "all2", "sel3", "sel2")
+
+## KOLMOGOROV-SMIRNOV
+RESULTS <- c(RESULTS, "Normality (Kolmogorov-Smirnov)")
+index <- 0
+for (class in feat_group){
+  index=index+1
+  x <- as.numeric(class)
+  N <- length(x)
+  the_mean <- mean(x)
+  the_sd <- sd(x)
+  # compute the probability density for normal distribution 
+  Y <- rnorm(N, the_mean, the_sd)
+  # compute Kolmogorov-Smirnov
+  KSResult <- ks.test(x, Y)
+  RESULTS <- c(RESULTS, feature_name[index])
+  RESULTS <- c(RESULTS, KSResult$p.value)
+}
+
+## LEVENE
+RESULTS <- c(RESULTS, "Homogeneity (Levene)")
+levResult <- leveneTest(UAR ~ as.factor(res.all3$model_label), data=res.all3)
+RESULTS <- c(RESULTS, "all3")
+RESULTS <- c(RESULTS, levResult$`Pr(>F)`[1:1])
+levResult <- leveneTest(UAR ~ as.factor(res.all3$model_label), data=res.all2)
+RESULTS <- c(RESULTS, "all2")
+RESULTS <- c(RESULTS, levResult$`Pr(>F)`[1:1])
+levResult <- leveneTest(UAR ~ as.factor(res.all3$model_label), data=res.sel3)
+RESULTS <- c(RESULTS, "sel3")
+RESULTS <- c(RESULTS, levResult$`Pr(>F)`[1:1])
+levResult <- leveneTest(UAR ~ as.factor(res.all3$model_label), data=res.sel2)
+RESULTS <- c(RESULTS, "sel2")
+RESULTS <- c(RESULTS, levResult$`Pr(>F)`[1:1])
+
+for (elem in RESULTS){
+  print(elem)
+}
+```
+
+
+
+## Run ANOVA
+
+```{r ANOVA_ML}
+
+data_sel <- res.sel2
+
+# Run ANOVA
+ANOVA_model <- aov(as.numeric(data_sel$UAR) ~ as.factor(model_label))
+etaSquared(ANOVA_model, type = 2, anova = FALSE)
+summary(ANOVA_model)
+
+# Run multiple comparisons
+TukeyHSD(ANOVA_model)
+
+# Get effect size
+hedg_g(data_sel, UAR ~ model_label)
+```
+
+
+## Interpret effect size for multiple comparisons
+
+d < 0.2 (very small);
+0.2 < d < 0.5 (small);
+0.5 < d < 0.8 (medium);
+0.8 < d < 1.2 (large);
+1.2 < d < 2.0 (huge);
+
+
+## Get Precision
+
+```{r get_precision}
+data_sel <- res.all2
+print('ALL_2')
+
+CNN_pre <- data_sel[which(data_sel$model_label == "CNN"),]
+SVM_pre <- data_sel[which(data_sel$model_label == "SVM"),]
+MLP_pre <- data_sel[which(data_sel$model_label == "MLP"),]
+
+print("CNN_ant")
+mean(CNN_pre$pre_ANT)
+print("CNN_con")
+mean(CNN_pre$pre_CON)
+print("CNN_hom")
+mean(CNN_pre$pre_HOM)
+
+```
+
+
