@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -- coding: utf-8 --
 import os
 import glob
 import shutil
@@ -5,12 +7,10 @@ import statistics
 from scipy import stats
 import pandas as pd
 import numpy as np
-import warnings
 import math
-warnings.filterwarnings('ignore')
-#!/usr/bin/env python
-# -- coding: utf-8 --
 from music21 import *
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def reshape_LLDs(my_dir):
@@ -28,7 +28,7 @@ def reshape_LLDs(my_dir):
                 mad = pd.read_csv(my_dir + '/LLD_Deltas_all/' + elem + '/' + part, sep='\t', engine='python')
                 df = pd.DataFrame(columns=mad.columns.tolist()[1:])
                 index = 0
-                for cell in mad["rhythm"]:
+                for cell in mad['rhythm']:
                     rep_row = round(cell/min(all_rhythms))
                     for num in range(rep_row):
                         df = df.append(mad.iloc[index])
@@ -178,7 +178,7 @@ def get_music21(madPart_content, annotations, LLD, composer, part_name, part_cle
 
 
 def get_annotations(file_name, path):
-    f           = open(path + '/' + file_name + '.krn', 'rt', encoding="utf8")
+    f           = open(path + '/' + file_name + '.krn', 'rt', encoding='utf8')
     annotations = {}
     my_key      = str()
     annotation_counter = 0
@@ -218,15 +218,11 @@ def get_deltas(LLD_list, delta_list):
 
 def get_tied_notes(my_element, my_list):
     if isinstance(my_element, note.Note):
-        if (my_element.tie is not None) and (my_element.tie.type == "stop" or my_element.tie.type == "continue"):
-            if isinstance(my_list[-1], note.Note):
-                my_list[-1].duration.quarterLength += my_element.duration.quarterLength
-            else:
-                back_count = -1
-                while isinstance(my_list[back_count], tuple):
-                    back_count = back_count - 1
-                else:
-                    my_list[back_count].duration.quarterLength += my_element.duration.quarterLength
+        if (my_element.tie is not None) and (my_element.tie.type == 'stop' or my_element.tie.type == 'continue'):
+            back_index = -1
+            while isinstance(my_list[back_index], tuple):
+                back_index -= 1
+            my_list[back_index].duration.quarterLength += my_element.duration.quarterLength
         else:
             my_list.append(my_element)
     elif isinstance(my_element, note.Rest):
