@@ -1,4 +1,4 @@
-# ISMIR2021_madrigal
+# Madrigalisms_Recognition
 
 This repository contains the scripts and data necesary to reproduce the outcomes presented in the submission to ISMIR2021 entitled "Automatic recognition of word-painting in Renaissance Music: Features evaluation and  baseline results". In order to carry out the experiments follow the instructions below:
 
