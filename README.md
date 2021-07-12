@@ -1,6 +1,6 @@
-# Madrigalisms_Recognition
+# Musical_Texture_Recognition
 
-This repository contains the scripts and data necesary to reproduce the outcomes presented in the submission to ISMIR2021 entitled "Automatic recognition of word-painting in Renaissance Music: Features evaluation and  baseline results". In order to carry out the experiments follow the instructions below:
+This repository contains the code necesary to reproduce the outcomes presented in the submission to ISMIR2021 entitled "Automatic Recognition of Texture in Renaissance Music". In order to carry out the experiments follow the instructions below:
 
 1. To extract the NLDs (Note Level Descriptors, i.e., Low Level Descriptors over time considering the Note as frame unit) and statistical functionals:
 	execute extract_functionals_NLDs.py (the folder corpus should be in the same directory). 
@@ -20,4 +20,4 @@ This repository contains the scripts and data necesary to reproduce the outcomes
 
 If you find the content of this repository useful, you might consider giving us a citation:
 
-E. Parada-Cabaleiro, M. Schmitt, A. Batliner, B. Schuller, & M., Schedl (2021), Automatic recognition of word-painting in Renaissance Music: Features evaluation and  baseline results, in Proc. of ISMIR, Online event, to appear.
+E. Parada-Cabaleiro, M. Schmitt, A. Batliner, B. Schuller, & M. Schedl (2021), Automatic Recognition of Texture in Renaissance Music, in Proc. of ISMIR, Online event, to appear.
