@@ -20,4 +20,4 @@ This repository contains the code necessary to reproduce the outcomes presented 
 
 If you find the content of this repository useful, you might consider giving us a citation:
 
-E. Parada-Cabaleiro, M. Schmitt, A. Batliner, B. Schuller, & M. Schedl (2021), Automatic Recognition of Texture in Renaissance Music, in Proc. of ISMIR, Online event, to appear.
+E. Parada-Cabaleiro, M. Schmitt, A. Batliner, B. Schuller, & M. Schedl (2021), Automatic Recognition of Texture in Renaissance Music, in Proc. of ISMIR, Online event, pp. 509-516.
